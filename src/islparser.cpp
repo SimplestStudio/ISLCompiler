@@ -32,23 +32,6 @@ static bool isValidLocaleCharacter(tchar c)
     return istalpha(c) || c == _T('_');
 }
 
-static tstring getPrimaryLang(const tstring &lang, bool withScript = false)
-{
-    if (!lang.empty()) {
-        tistringstream iss(lang);
-        tstring primlang, script;
-        std::getline(iss, primlang, _T('_'));
-        if (primlang.length() == 2 || primlang.length() == 3) {
-            if (!withScript)
-                return primlang;
-            std::getline(iss, script, _T('_'));
-            return (script.length() == 4) ? primlang + _T("_") + script : primlang;
-        }
-    }
-    NS_Logger::WriteLog(_T("An error occurred: ") + FUNCTION_INFO);
-    return _T("en");
-}
-
 #ifdef _WIN32
 static std::wstring Utf8ToWStr(const std::string &str)
 {

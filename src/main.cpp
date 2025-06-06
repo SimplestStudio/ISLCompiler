@@ -17,13 +17,14 @@ ISL Translation Compiler (v1.0)
 Converts ISL translation files to BIN format
 
 ARGUMENTS:
-  --input=<file>     Set path to the input file
+  --input=<file>     Set path to a single ISL file
   --decode           Convert from BIN back to ISL
 
 EXAMPLE:
   islcompiler --input=source.isl
 
 NOTES:
+  - --decode works only with --input
   - Overwrites the output file if it already exists.
 )";
 
@@ -55,6 +56,10 @@ int main(int argc, char *argv[])
 
     if (NS_Args::cmdArgContains(_T("--input"))) {
         tstring inputPath = NS_Args::cmdArgValue(_T("--input"));
+        if (inputPath.empty() || !NS_File::fileExists(inputPath)) {
+            tprintf(_T("[ERROR] Input file not found: %s\n"), inputPath.c_str());
+            return 0;
+        }
 
         if (NS_Args::cmdArgContains(_T("--decode"))) {
             if (!ISLParser::binToTranslation(inputPath))
