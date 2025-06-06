@@ -12,7 +12,7 @@
 
 
 static const char pHelp[] = R"(
-ISL Translation Compiler (v1.0)
+ISL Translation Compiler (v1.1)
 ===========================================
 Converts ISL translation files to BIN format
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    printf("\nISL Translation Compiler (v1.0)\n");
+    printf("\nISL Translation Compiler (v1.1)\n");
     if (NS_Args::cmdArgContains(_T("--log")))
         NS_Logger::AllowWriteLog();
 
