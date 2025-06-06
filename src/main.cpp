@@ -18,24 +18,20 @@ Converts ISL translation files to BIN format
 
 ARGUMENTS:
   --input=<file>     Set path to a single ISL file
+  --input-dir=<path> Set directory containing multiple ISL files
+  --output=<file>    Set path to the output BIN or ISL file
   --decode           Convert from BIN back to ISL
+  --verify           Check ISL file syntax and structure
 
 EXAMPLE:
   islcompiler --input=source.isl
+  islcompiler --input-dir=lang --output=out.bin
 
 NOTES:
   - --decode works only with --input
   - Overwrites the output file if it already exists.
 )";
 
-
-static tstring replaceExtension(const tstring &filePath, const tstring &newExt)
-{
-    auto pos = filePath.find_last_of('.');
-    tstring outPath = (pos == tstring::npos) ? filePath : filePath.substr(0, pos);
-    outPath += newExt;
-    return outPath;
-}
 
 #ifdef _WIN32
 int __cdecl _tmain (int argc, TCHAR *argv[])
@@ -45,7 +41,7 @@ int main(int argc, char *argv[])
 {
     std::locale::global(std::locale(""));
     NS_Args::parseCmdArgs(argc, argv);
-    if (argc < 2 || !NS_Args::cmdArgContains(_T("--input"))) {
+    if (argc < 2 || (!NS_Args::cmdArgContains(_T("--input")) && !NS_Args::cmdArgContains(_T("--input-dir")))) {
         printf("%s", pHelp);
         return 0;
     }
@@ -54,6 +50,21 @@ int main(int argc, char *argv[])
     if (NS_Args::cmdArgContains(_T("--log")))
         NS_Logger::AllowWriteLog();
 
+    tstring outPath;
+    if (NS_Args::cmdArgContains(_T("--output")))
+        outPath = NS_Args::cmdArgValue(_T("--output"));
+
+    std::vector<tstring> inputFiles;
+    if (NS_Args::cmdArgContains(_T("--input-dir"))) {
+        tstring inputDir = NS_Args::cmdArgValue(_T("--input-dir"));
+
+        inputFiles = NS_File::getFilesWithExtension(inputDir, _T(".isl"));
+        if (inputFiles.empty()) {
+            tprintf(_T("[ERROR] Directory does not contain ISL files: %s\n"), inputDir.c_str());
+            return 0;
+        }
+
+    } else
     if (NS_Args::cmdArgContains(_T("--input"))) {
         tstring inputPath = NS_Args::cmdArgValue(_T("--input"));
         if (inputPath.empty() || !NS_File::fileExists(inputPath)) {
@@ -62,21 +73,38 @@ int main(int argc, char *argv[])
         }
 
         if (NS_Args::cmdArgContains(_T("--decode"))) {
-            if (!ISLParser::binToTranslation(inputPath))
+            if (outPath.empty())
+                outPath = inputPath + _T(".isl");
+            if (!ISLParser::binToTranslation(inputPath, outPath))
                 tprintf(_T("[ERROR] Conversion failed: %s\n"), inputPath.c_str());
-            else {
-                tprintf(_T("[OK] Conversion succeeded: %s\n"), inputPath.c_str());
-            }
-        } else {
-            tstring err;
-            tstring outPath = replaceExtension(inputPath, _T(".bin"));
-            ISLParser isl(inputPath);
-            if (!isl.translationToBin(outPath, err))
-                tprintf(_T("[ERROR] Conversion failed: %s\n"), err.c_str());
             else {
                 tprintf(_T("[OK] Conversion succeeded: %s\n"), outPath.c_str());
             }
+            return 0;
+        }
+        inputFiles.push_back(inputPath);
+    }
+
+    tstring err;
+    ISLParser isl;
+    if (NS_Args::cmdArgContains(_T("--verify"))) {
+        isl.verify(inputFiles, err);
+        tprintf(_T("%s\n"), err.c_str());
+
+    } else {
+        if (outPath.empty()) {
+            tstring path = NS_File::parentPath(inputFiles.at(0));
+#ifdef _WIN32
+            path = NS_File::fromNativeSeparators(path);
+#endif
+            outPath = path + _T("/out.bin");
+        }
+        if (!isl.translationToBin(inputFiles, outPath, err))
+            tprintf(_T("[ERROR] Conversion failed: %s\n"), err.c_str());
+        else {
+            tprintf(_T("[OK] Conversion succeeded: %s\n"), outPath.c_str());
         }
     }
+
     return 0;
 }

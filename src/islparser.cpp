@@ -46,21 +46,10 @@ static std::string WStrToUtf8(const std::wstring &str)
 }
 #endif
 
-ISLParser::ISLParser(const tstring &filePath) :
+ISLParser::ISLParser() :
     is_translations_valid(false)
 {
-    std::string tr;
-    if (NS_File::readFile(filePath, tr) && !tr.empty()) {
-#ifdef _WIN32
-        translations = Utf8ToWStr(tr);
-#else
-        translations = tr;
-#endif
-        parseTranslations();
-        if (!is_translations_valid)
-            NS_Logger::WriteLog(_T("Cannot parse translations, error in string: ") + error_substr + _T(" <---"));
-    } else
-        NS_Logger::WriteLog(_T("Error: translations is empty."));
+
 }
 
 ISLParser::~ISLParser()
@@ -68,28 +57,94 @@ ISLParser::~ISLParser()
 
 }
 
-bool ISLParser::translationToBin(const tstring &filePath, tstring &error)
+void ISLParser::verify(const std::vector<tstring> &islFilePaths, tstring &error)
 {
-    if (is_translations_valid) {
+    for (const tstring &filePath : islFilePaths) {
+        error.append(_T("\nFile verification: ") + filePath + _T("\n"));
+        error.append(_T("============================\n"));
+        is_translations_valid = false;
+        if (!translations.empty())
+            translations.clear();
+        std::string tr;
+        if (!NS_File::readFile(filePath, tr)) {
+            error.append(_T("Error: cannot read file!\n"));
+            continue;
+        }
+        if (!tr.empty()) {
+#ifdef _WIN32
+            translations = Utf8ToWStr(tr);
+#else
+            translations = tr;
+#endif
+        }
+
+        if (translations.empty()) {
+            error.append(_T("Warning: translations is empty!\n"));
+            continue;
+        }
+
+        parseTranslations();
+        if (!is_translations_valid) {
+            error.append(_T("Error: cannot parse translations, error in string:\n") + error_substr + _T(" <---\n"));
+            continue;
+        }
         if (translMap.empty()) {
-            error = _T("Translations is empty!");
-            return false;
+            error.append(_T("Warning: translations map is empty!\n"));
+            continue;
         }
-        if (!NS_File::writeBinFile(filePath, translMap)) {
-            error = _T("Cannot write file!");
-            return false;
-        }
-        return true;
-    } else
-        error = error_substr;
-    return false;
+        error.append(_T("Status: ok\n"));
+    }
 }
 
-bool ISLParser::binToTranslation(const tstring &filePath)
+bool ISLParser::translationToBin(const std::vector<tstring> &islFilePaths, const tstring &binFilePath, tstring &error)
+{
+    is_translations_valid = false;
+    if (!translations.empty())
+        translations.clear();
+    for (const tstring &filePath : islFilePaths) {
+        std::string tr;
+        if (!NS_File::readFile(filePath, tr)) {
+            error = _T("cannot read file ") + filePath;
+            return false;
+        }
+        if (!tr.empty()) {
+#ifdef _WIN32
+            translations.append(Utf8ToWStr(tr));
+#else
+            translations.append(tr);
+#endif
+            translations.push_back('\n');
+        }
+    }
+
+    if (translations.empty()) {
+        error = _T("translations is empty!");
+        return false;
+    }
+
+    parseTranslations();
+    if (!is_translations_valid) {
+        error = _T("cannot parse translations, error in string: ") + error_substr + _T(" <---");
+        return false;
+    }
+
+    if (translMap.empty()) {
+        error = _T("translations map is empty!");
+        return false;
+    }
+    if (!NS_File::writeBinFile(binFilePath, translMap)) {
+        error = _T("cannot write file ") + binFilePath;
+        return false;
+    }
+    return true;
+}
+
+bool ISLParser::binToTranslation(const tstring &binFilePath, const tstring &islFilePath)
 {
     std::string out;
     std::unordered_map<tstring, LocaleMap> translMap;
-    NS_File::readBinFile(filePath, translMap);
+    if (!NS_File::readBinFile(binFilePath, translMap))
+        return false;
     for (auto it = translMap.cbegin(); it != translMap.cend(); ++it) {
         tstring key = it->first;
         const LocaleMap &localeMap = it->second;
@@ -118,9 +173,7 @@ bool ISLParser::binToTranslation(const tstring &filePath)
         }
         out.append("\n");
     }
-    tstring outPath(filePath);
-    outPath.append(_T(".isl"));
-    return NS_File::writeFile(outPath, out);
+    return NS_File::writeFile(islFilePath, out);
 }
 
 void ISLParser::parseTranslations()

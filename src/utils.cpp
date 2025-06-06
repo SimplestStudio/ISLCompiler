@@ -13,6 +13,7 @@
   typedef std::wstringstream tstringstream;
   typedef std::wofstream tofstream;
 #else
+# include <dirent.h>
 # include <sys/stat.h>
 # include <fcntl.h>
 # include <cstdint>
@@ -304,6 +305,48 @@ namespace NS_File
             return false;
         return S_ISREG(st.st_mode);
 #endif
+    }
+
+    std::vector<tstring> getFilesWithExtension(const tstring &folderPath, const tstring &ext)
+    {
+        std::vector<tstring> files;
+        if (folderPath.empty())
+            return files;
+        tstring outPath(folderPath);
+#ifdef _WIN32
+        std::replace(outPath.begin(), outPath.end(), L'/', L'\\');
+        if (outPath.back() != L'\\')
+            outPath.push_back(L'\\');
+        tstring searchPath(outPath);
+        searchPath.push_back(L'*');
+        searchPath.append(ext);
+
+        WIN32_FIND_DATA fd;
+        HANDLE hFind = FindFirstFile(searchPath.c_str(), &fd);
+        if (hFind == INVALID_HANDLE_VALUE)
+            return files;
+
+        do {
+            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+                files.push_back(outPath + fd.cFileName);
+        } while (FindNextFile(hFind, &fd));
+        FindClose(hFind);
+#else
+        DIR *dir = opendir(folderPath.c_str());
+        if (!dir) return files;
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            tstring name = entry->d_name;
+            if (entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) {
+                auto pos = name.find_last_of('.');
+                if (pos != tstring::npos && name.substr(pos) == ext)
+                    files.push_back(folderPath + "/" + name);
+            }
+        }
+        closedir(dir);
+#endif
+        return files;
     }
 
 #ifdef _WIN32

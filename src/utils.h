@@ -30,6 +30,7 @@ bool writeFile(const tstring &filePath, std::string &str);
 bool readBinFile(const tstring &filePath, std::unordered_map<tstring, LocaleMap> &translMap);
 bool writeBinFile(const tstring &filePath, const std::unordered_map<tstring, LocaleMap> &translMap);
 bool fileExists(const tstring &filePath);
+std::vector<tstring> getFilesWithExtension(const tstring &folderPath, const tstring &ext);
 #ifdef _WIN32
 tstring fromNativeSeparators(const tstring &path);
 tstring toNativeSeparators(const tstring &path);

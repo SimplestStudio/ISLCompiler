@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <vector>
 #ifdef _WIN32
 # include <tchar.h>
 # define tchar wchar_t
@@ -22,11 +23,12 @@ typedef unordered_map<tstring, LocaleMap> TranslationsMap;
 class ISLParser
 {
 public:
-    ISLParser(const tstring &filePath);
+    ISLParser();
     ~ISLParser();
 
-    bool translationToBin(const tstring &filePath, tstring &error);
-    static bool binToTranslation(const tstring &filePath);
+    void verify(const std::vector<tstring> &islFilePaths, tstring &error);
+    bool translationToBin(const std::vector<tstring> &islFilePaths, const tstring &binFilePath, tstring &error);
+    static bool binToTranslation(const tstring &binFilePath, const tstring &islFilePath);
 
 private:
     void parseTranslations();
