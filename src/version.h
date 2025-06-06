@@ -16,7 +16,7 @@
 # define VER_STR_SHORT(mj,mn)        VER_STRINGIFY(mj) "." VER_STRINGIFY(mn) "\0"
 
 # define VER_NUM_MAJOR               1
-# define VER_NUM_MINOR               0
+# define VER_NUM_MINOR               1
 # define VER_NUM_BUILD               0
 # define VER_NUM_REVISION            0
 # define VER_NUMBER                  VER_NUM_MAJOR,VER_NUM_MINOR,VER_NUM_BUILD,VER_NUM_REVISION
