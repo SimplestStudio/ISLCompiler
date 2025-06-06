@@ -324,8 +324,37 @@ namespace NS_File
 
     tstring parentPath(const tstring &path)
     {
-        tstring::size_type delim = path.find_last_of(_T("\\/"));
-        return (delim == tstring::npos) ? _T("") : path.substr(0, delim);
+        size_t len = path.length();
+        if (len > 1) {
+            const tchar *buf = path.c_str();
+            const tchar *it = buf + len - 1;
+            while (*it == '/'
+#ifdef _WIN32
+                   || *it == '\\'
+#endif
+                   ) {
+                if (it == buf)
+                    return _T("");
+                it--;
+            }
+            while (*it != '/'
+#ifdef _WIN32
+                   && *it != '\\'
+#endif
+                   ) {
+                if (it == buf)
+                    return _T("");
+                it--;
+            }
+            if (it == buf)
+#ifdef _WIN32
+                return _T("");
+#else
+                return _T("/");
+#endif
+            return tstring(buf, it - buf);
+        }
+        return _T("");
     }
 
     tstring appPath()
